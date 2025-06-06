@@ -1,50 +1,76 @@
 import tkinter as tk
-from tkinter import messagebox
-from datetime import datetime, timedelta
+from tkinter import messagebox, ttk
+import csv
+from datetime import datetime
+import os
 
-def registrar_entrada():
+ARCHIVO_ASISTENCIA = 'asistencias.csv'
+
+if not os.path.exists(ARCHIVO_ASISTENCIA):
+    with open(ARCHIVO_ASISTENCIA, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Nombre', 'DNI', 'Accion', 'Fecha', 'Hora'])
+
+def registrar_asistencia(accion):
     nombre = entry_nombre.get()
-    if not nombre:
-        messagebox.showwarning("Entrada inválida", "Por favor, ingresa tu nombre.")
+    dni = entry_dni.get()
+    if not nombre or not dni:
+        messagebox.showwarning("Campos Vacíos", "Por favor ingrese nombre y DNI.")
         return
 
-    turno = var_turno.get()
-    if turno == "Seleccionar turno":
-        messagebox.showwarning("Turno inválido", "Por favor, selecciona un turno.")
-        return
+    ahora = datetime.now()
+    fecha = ahora.strftime('%Y-%m-%d')
+    hora = ahora.strftime('%H:%M:%S')
 
-    hora_actual = datetime.now()
-    hora_turno = {
-        "Matutino": datetime.strptime("08:00", "%H:%M"),
-        "Vespertino": datetime.strptime("16:00", "%H:%M"),
-        "Nocturno": datetime.strptime("00:00", "%H:%M")
-    }.get(turno)
+    with open(ARCHIVO_ASISTENCIA, 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([nombre, dni, accion, fecha, hora])
 
-    if hora_turno:
-        if hora_actual > hora_turno + timedelta(minutes=10):
-            mensaje = f"¡Retardo! Llegaste {hora_actual - (hora_turno + timedelta(minutes=10))} tarde."
-        else:
-            mensaje = f"Entrada registrada a las {hora_actual.strftime('%H:%M:%S')}."
-    else:
-        mensaje = "Turno no válido."
+    messagebox.showinfo("Registro Exitoso", f"{accion} registrada para {nombre} a las {hora}")
+    entry_nombre.delete(0, tk.END)
+    entry_dni.delete(0, tk.END)
+    actualizar_historial()
 
-    messagebox.showinfo("Registro de entrada", mensaje)
+def actualizar_historial():
+    for row in tree.get_children():
+        tree.delete(row)
+
+    with open(ARCHIVO_ASISTENCIA, 'r') as f:
+        reader = csv.reader(f)
+        next(reader) 
+        for row in reader:
+            tree.insert("", tk.END, values=row)
 
 ventana = tk.Tk()
-ventana.title("Control de Asistencias")
-ventana.geometry("300x250")
+ventana.title("Control de Asistencias - Hospital")
+ventana.geometry("700x500")
 
-tk.Label(ventana, text="Nombre:").pack(pady=5)
-entry_nombre = tk.Entry(ventana)
-entry_nombre.pack(pady=5)
+frame_formulario = tk.Frame(ventana)
+frame_formulario.pack(pady=10)
 
-tk.Label(ventana, text="Selecciona tu turno:").pack(pady=5)
-var_turno = tk.StringVar(value="Seleccionar turno")
-turnos = ["Matutino", "Vespertino", "Nocturno"]
-turno_menu = tk.OptionMenu(ventana, var_turno, *turnos)
-turno_menu.pack(pady=5)
+tk.Label(frame_formulario, text="Nombre del Trabajador:").grid(row=0, column=0, padx=5, pady=5)
+entry_nombre = tk.Entry(frame_formulario, width=30)
+entry_nombre.grid(row=0, column=1, padx=5)
 
-btn_registrar = tk.Button(ventana, text="Registrar Entrada", command=registrar_entrada)
-btn_registrar.pack(pady=20)
+tk.Label(frame_formulario, text="DNI:").grid(row=1, column=0, padx=5, pady=5)
+entry_dni = tk.Entry(frame_formulario, width=30)
+entry_dni.grid(row=1, column=1, padx=5)
 
+btn_entrada = tk.Button(frame_formulario, text="Registrar Entrada", command=lambda: registrar_asistencia("Entrada"))
+btn_entrada.grid(row=2, column=0, pady=10)
+
+btn_salida = tk.Button(frame_formulario, text="Registrar Salida", command=lambda: registrar_asistencia("Salida"))
+btn_salida.grid(row=2, column=1, pady=10)
+
+frame_tabla = tk.Frame(ventana)
+frame_tabla.pack(pady=10)
+
+tree = ttk.Treeview(frame_tabla, columns=('Nombre', 'DNI', 'Accion', 'Fecha', 'Hora'), show='headings')
+for col in tree['columns']:
+    tree.heading(col, text=col)
+    tree.column(col, width=120)
+
+tree.pack()
+
+actualizar_historial()
 ventana.mainloop()
