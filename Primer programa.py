@@ -1,3 +1,5 @@
+import tkinter as tk
+from tkinter import messagebox
 class Trabajador:
     def __init__(self, parent):
         self.frame = tk.LabelFrame(parent, text="Datos del Trabajador", padx=10, pady=10, bg="light blue")
